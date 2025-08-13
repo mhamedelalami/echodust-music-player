@@ -85,7 +85,7 @@ App
 | App                 | Root component that contains routing logic and wraps all pages. |
 | HomePage            | Displays logo, mood/genre selector, popular tracks, and persistent player bar. |
 | SearchResultsPage   | Shows tracks based on selected mood/genre or search query. |
-| NowPlayingPage      | Displays detailed info of currently playing track or album. |
+| NowPlayingBar      | Displays detailed info of currently playing track or album. |
 | NotFoundPage        | Fallback route for undefined paths. |
 | Logo                | Displays the EchoDust logo. |
 | MoodGenreSelector   | Dropdown selector to browse tracks by mood or genre. |
