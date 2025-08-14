@@ -1,21 +1,34 @@
-// frontend/src/App.jsx
-
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import SearchResultsPage from './pages/SearchResultsPage';
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import SearchResultsPage from "./pages/SearchResultsPage";
+import NowPlayingPage from "./pages/NowPlayingPage";
 
 function App() {
+  // Global state for NowPlayingBar
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [albumTracks, setAlbumTracks] = useState([]);
+
   return (
     <Router>
-      {/* You can add a main layout wrapper here if you want */}
-      <main className="bg-gray-900">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/search/:query" element={<SearchResultsPage />} />
-          {/* <Route path="*" element={<NotFoundPage />} /> */}
-        </Routes>
-      </main>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Layout
+              currentTrack={currentTrack}
+              albumTracks={albumTracks}
+              setCurrentTrack={setCurrentTrack}
+              setAlbumTracks={setAlbumTracks}
+            />
+          }
+        >
+          <Route index element={<HomePage />} />
+          <Route path="search/:query" element={<SearchResultsPage />} />
+           <Route path="now-playing" element={<NowPlayingPage />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
