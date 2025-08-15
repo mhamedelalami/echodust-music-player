@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function NowPlayingBar({ currentTrack, albumTracks }) {
+export default function NowPlayingBar({
+  currentTrack,
+  albumTracks,
+  setCurrentTrack,
+  setAlbumTracks
+}) {
+  const navigate = useNavigate();
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -63,11 +70,22 @@ export default function NowPlayingBar({ currentTrack, albumTracks }) {
 
   const track = albumTracks && albumTracks[trackIndex] ? albumTracks[trackIndex] : null;
 
+  // Navigate to NowPlayingPage when clicking info
+  const handleInfoClick = () => {
+    if (setCurrentTrack) setCurrentTrack(track);
+    if (setAlbumTracks) setAlbumTracks(albumTracks);
+    navigate("/now-playing", { state: { track, albumTracks } });
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gray-800 text-white flex flex-col md:flex-row items-center justify-between p-4 shadow-lg z-50">
       {track ? (
         <>
-          <div className="flex items-center space-x-3 mb-2 md:mb-0">
+          {/* Clickable album art and info */}
+          <div
+            className="flex items-center space-x-3 mb-2 md:mb-0 cursor-pointer"
+            onClick={handleInfoClick}
+          >
             <img
               src={track.album.cover_small}
               alt={track.title}

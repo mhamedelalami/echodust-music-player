@@ -1,21 +1,29 @@
+
 import React from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 const TrackCard = ({ track, albumTracks }) => {
   const navigate = useNavigate();
-  const { setCurrentTrack, setAlbumTracks } = useOutletContext(); // get setters from Layout
+  const { setCurrentTrack, setAlbumTracks } = useOutletContext();
 
-  // Handle click to update NowPlayingBar
-  const handleClick = () => {
+  // Navigate to NowPlayingPage when clicking card/album art
+  const handleCardClick = () => {
     setCurrentTrack(track);
-    setAlbumTracks(albumTracks || [track]); // fallback if no albumTracks provided
-    navigate("/now-playing", { state: { track, albumTracks } }); // optional: navigate to NowPlayingPage
+    setAlbumTracks(albumTracks || [track]);
+    navigate("/now-playing", { state: { track, albumTracks } });
+  };
+
+  // Only update NowPlayingBar when clicking play button
+  const handlePlayClick = (e) => {
+    e.stopPropagation(); // prevent triggering card click
+    setCurrentTrack(track);
+    setAlbumTracks(albumTracks || [track]);
   };
 
   return (
     <div
       className="bg-gray-800 p-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 cursor-pointer relative"
-      onClick={handleClick}
+      onClick={handleCardClick}
     >
       <img
         src={track.album.cover_medium}
@@ -23,7 +31,11 @@ const TrackCard = ({ track, albumTracks }) => {
         className="w-full h-48 md:h-56 rounded-md mb-4 object-cover"
       />
 
-      <div className="absolute top-2 right-2 bg-pink-500 p-1 rounded-full text-white font-bold">
+      {/* Play button */}
+      <div
+        className="absolute top-2 right-2 bg-pink-500 p-1 rounded-full text-white font-bold"
+        onClick={handlePlayClick}
+      >
         ▶
       </div>
 
@@ -36,4 +48,3 @@ const TrackCard = ({ track, albumTracks }) => {
 };
 
 export default TrackCard;
-

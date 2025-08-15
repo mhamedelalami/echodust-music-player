@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import BackHomeButton from "../components/BackHomeButton";
 import SearchBar from "../components/SearchBar";
@@ -12,22 +12,22 @@ export default function NowPlayingPage() {
   const [albumTracks, setAlbumTracks] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(track);
 
+  // Fetch album tracks when page loads or track changes
   useEffect(() => {
-    if (track?.album?.id) {
-      const fetchAlbumTracks = async () => {
-        try {
-          const res = await fetch(
-            `https://cors-anywhere.herokuapp.com/https://api.deezer.com/album/${track.album.id}`
-          );
-          const data = await res.json();
-          setAlbumTracks(data.tracks.data || []);
-        } catch (error) {
-          console.error("Error fetching album tracks:", error);
-        }
-      };
-      fetchAlbumTracks();
-    }
-  }, [track]);
+  if (track?.album?.id) {
+    const fetchAlbumTracks = async () => {
+      try {
+        const res = await fetch(`https://thingproxy.freeboard.io/fetch/https://api.deezer.com/album/${track.album.id}`);
+        const data = await res.json();
+        setAlbumTracks(data.tracks.data || []);
+      } catch (error) {
+        console.error("Error fetching album tracks:", error);
+      }
+    };
+    fetchAlbumTracks();
+  }
+}, [track]);
+
 
   if (!track) {
     return (
@@ -38,7 +38,6 @@ export default function NowPlayingPage() {
     );
   }
 
-  // Handle clicking a track in the list
   const handleTrackClick = (selectedTrack) => {
     setCurrentTrack(selectedTrack);
   };
@@ -54,7 +53,7 @@ export default function NowPlayingPage() {
       </div>
 
       {/* Album art */}
-      <div className="flex justify-center mt-4">
+      <div className="flex justify-center mt-4 cursor-pointer" onClick={() => setCurrentTrack(track)}>
         <img
           src={currentTrack.album.cover_big}
           alt={currentTrack.album.title}
@@ -64,7 +63,11 @@ export default function NowPlayingPage() {
 
       {/* Track list */}
       <div className="flex-1 p-4 overflow-y-auto">
-        <TrackList tracks={albumTracks} onTrackClick={handleTrackClick} />
+        {albumTracks.length > 0 ? (
+          <TrackList tracks={albumTracks} onTrackClick={handleTrackClick} />
+        ) : (
+          <p className="text-gray-400 text-center">Loading album tracks...</p>
+        )}
       </div>
 
       {/* Persistent NowPlayingBar */}
@@ -72,5 +75,8 @@ export default function NowPlayingPage() {
     </div>
   );
 }
+
+
+
 
 
