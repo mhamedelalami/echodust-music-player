@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import SearchBar from "../components/SearchBar";
 import TrackCard from "../components/TrackCard";
 import { getPopularTracks } from "../services/deezerApi";
 
@@ -8,6 +7,8 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { setCurrentTrack, setAlbumTracks } = useOutletContext(); // setters from Layout
   const [popularTracks, setPopularTracks] = useState([]);
+
+  // Removed misplaced JSX fragment and paragraph
 
   // Load popular tracks
   useEffect(() => {
@@ -22,12 +23,7 @@ const HomePage = () => {
     fetchPopular();
   }, [setCurrentTrack, setAlbumTracks]);
 
-  // Handlers
-  const handleSearch = (query) => {
-    if (!query) return;
-    navigate(`/search/${query}`);
-  };
-
+  // Handlers for mood & genre filtering
   const handleMoodChange = (e) => {
     const mood = e.target.value;
     if (!mood) return;
@@ -42,16 +38,6 @@ const HomePage = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-50 p-4">
-      <h1 className="text-5xl font-bold text-gray-900 mb-2">
-        🎧 <span className="text-pink-500">Echo</span>Dust
-      </h1>
-      <p className="text-gray-600 mb-8">Unlock the soundtrack of your soul.</p>
-
-      {/* Search */}
-      <div className="w-full max-w-lg mb-4">
-        <SearchBar onSearch={handleSearch} />
-      </div>
-
       {/* Mood & Genre */}
       <div className="flex gap-4 mb-8">
         <select onChange={handleMoodChange} className="p-2 rounded bg-gray-200 text-gray-900">
@@ -94,4 +80,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

@@ -1,21 +1,33 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import NowPlayingBar from "./NowPlayingBar";
+import Header from "./Header";
 
 const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) => {
+  const navigate = useNavigate();
+
+  // Global search handler for header
+  const handleSearch = (query) => {
+    if (!query) return;
+    navigate(`/search/${query}`);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Header */}
+      <Header onSearch={handleSearch} />
+
       {/* Pages */}
       <Outlet
         context={{
           setCurrentTrack,
           setAlbumTracks,
           currentTrack,
-          albumTracks
+          albumTracks,
         }}
       />
 
-      {/* Persistent NowPlayingBar with direct props */}
+      {/* Persistent NowPlayingBar */}
       {currentTrack && (
         <NowPlayingBar
           currentTrack={currentTrack}
@@ -34,4 +46,3 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
 };
 
 export default Layout;
-

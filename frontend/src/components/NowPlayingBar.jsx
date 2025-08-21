@@ -14,28 +14,30 @@ export default function NowPlayingBar({
   const [trackIndex, setTrackIndex] = useState(0);
   const [volume, setVolume] = useState(1);
 
-  // Update trackIndex when currentTrack changes
+  // ✅ Keep trackIndex in sync with currentTrack
   useEffect(() => {
     if (!albumTracks || !currentTrack) return;
     const index = albumTracks.findIndex((t) => t.id === currentTrack.id);
     setTrackIndex(index >= 0 ? index : 0);
-    setIsPlaying(true); // auto play when track changes
+    setIsPlaying(true); // auto play on track change
   }, [currentTrack, albumTracks]);
 
-  // Load current track and play if needed
+  // ✅ Load and play when trackIndex changes
   useEffect(() => {
-    const track = albumTracks && albumTracks[trackIndex];
+    if (!albumTracks || albumTracks.length === 0) return;
+    const track = albumTracks[trackIndex];
     if (!track || !audioRef.current) return;
 
-    // Only update src if it changed
     if (audioRef.current.src !== track.preview) {
       audioRef.current.src = track.preview;
       audioRef.current.volume = volume;
-      if (isPlaying) audioRef.current.play().catch(() => setIsPlaying(false));
+      if (isPlaying) {
+        audioRef.current.play().catch(() => setIsPlaying(false));
+      }
     }
-  }, [trackIndex, albumTracks, isPlaying, volume]);
+  }, [trackIndex, albumTracks, volume, isPlaying]);
 
-  // Play/pause toggle
+  // ✅ Toggle play/pause
   const togglePlay = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
@@ -46,30 +48,33 @@ export default function NowPlayingBar({
     }
   };
 
-  // Next/Prev track handlers (update currentTrack too)
+  // ✅ Next track
   const handleNextTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) return;
 
-    const nextIndex = (trackIndex + 1) % albumTracks.length;
-    const nextTrack = albumTracks[nextIndex];
+    setTrackIndex((prev) => {
+      const nextIndex = (prev + 1) % albumTracks.length;
+      const nextTrack = albumTracks[nextIndex];
+      setCurrentTrack?.(nextTrack);
+      setIsPlaying(true);
+      return nextIndex;
+    });
+  }, [albumTracks, setCurrentTrack]);
 
-    setTrackIndex(nextIndex);
-    if (setCurrentTrack) setCurrentTrack(nextTrack); // ✅ update currentTrack
-    setIsPlaying(true);
-  }, [albumTracks, trackIndex, setCurrentTrack]);
-
+  // ✅ Prev track
   const handlePrevTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) return;
 
-    const prevIndex = (trackIndex - 1 + albumTracks.length) % albumTracks.length;
-    const prevTrack = albumTracks[prevIndex];
+    setTrackIndex((prev) => {
+      const prevIndex = (prev - 1 + albumTracks.length) % albumTracks.length;
+      const prevTrack = albumTracks[prevIndex];
+      setCurrentTrack?.(prevTrack);
+      setIsPlaying(true);
+      return prevIndex;
+    });
+  }, [albumTracks, setCurrentTrack]);
 
-    setTrackIndex(prevIndex);
-    if (setCurrentTrack) setCurrentTrack(prevTrack); // ✅ update currentTrack
-    setIsPlaying(true);
-  }, [albumTracks, trackIndex, setCurrentTrack]);
-
-  // Update progress
+  // ✅ Progress bar update + auto-next
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -86,9 +91,10 @@ export default function NowPlayingBar({
 
   const track = albumTracks && albumTracks[trackIndex] ? albumTracks[trackIndex] : null;
 
+  // ✅ Navigate to NowPlayingPage
   const handleInfoClick = () => {
-    if (setCurrentTrack) setCurrentTrack(track);
-    if (setAlbumTracks) setAlbumTracks(albumTracks);
+    setCurrentTrack?.(track);
+    setAlbumTracks?.(albumTracks);
     navigate("/now-playing", { state: { track, albumTracks } });
     setIsPlaying(true);
   };
@@ -111,21 +117,16 @@ export default function NowPlayingBar({
     <div className="fixed bottom-0 left-0 right-0 bg-gray-800 text-white flex flex-col md:flex-row items-center justify-between p-4 shadow-lg z-50">
       {track ? (
         <>
-          <div
-            className="flex items-center space-x-3 mb-2 md:mb-0 cursor-pointer"
-            onClick={handleInfoClick}
-          >
-            <img
-              src={track.album.cover_small}
-              alt={track.title}
-              className="w-12 h-12 rounded object-cover"
-            />
+          {/* Track Info */}
+          <div className="flex items-center space-x-3 mb-2 md:mb-0 cursor-pointer" onClick={handleInfoClick}>
+            <img src={track.album.cover_small} alt={track.title} className="w-12 h-12 rounded object-cover" />
             <div>
               <p className="font-medium">{track.title}</p>
               <p className="text-gray-400 text-sm">{track.artist.name}</p>
             </div>
           </div>
 
+          {/* Controls */}
           <div className="flex items-center space-x-4">
             <button onClick={handlePrevTrack} className="text-pink-500 font-bold">⏮</button>
             <button onClick={togglePlay} className="bg-pink-500 px-3 py-1 rounded font-bold">
@@ -134,6 +135,7 @@ export default function NowPlayingBar({
             <button onClick={handleNextTrack} className="text-pink-500 font-bold">⏭</button>
           </div>
 
+          {/* Progress */}
           <div className="flex items-center space-x-2 w-full md:w-1/3">
             <input
               type="range"
@@ -145,6 +147,7 @@ export default function NowPlayingBar({
             />
           </div>
 
+          {/* Volume */}
           <div className="flex items-center space-x-2 ml-4">
             <span>🔊</span>
             <input
@@ -165,3 +168,4 @@ export default function NowPlayingBar({
     </div>
   );
 }
+
