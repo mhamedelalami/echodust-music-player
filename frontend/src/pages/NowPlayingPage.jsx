@@ -52,7 +52,7 @@ export default function NowPlayingPage() {
     <div className="flex justify-between items-center p-4">
       <BackHomeButton />
       <div className="w-1/2">
-        <SearchBar onSearch={(query) => console.log("Search:", query)} />
+        {/* <SearchBar onSearch={(query) => console.log("Search:", query)} /> */}
       </div>
     </div>
 
