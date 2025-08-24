@@ -32,7 +32,6 @@ const Header = ({ onSearch }) => {
         justifyContent: "space-between",
         padding: "0.5rem 1rem",
         backgroundColor: "#ffffff",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
       }}
     >
       {/* Logo */}

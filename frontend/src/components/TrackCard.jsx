@@ -129,7 +129,6 @@ const TrackCard = ({
     position: "absolute",
     top: "50%",
     left: "50%",
-    transform: "translate(-50%, -50%)",
     color: "#ffffff",
     backgroundColor: "rgba(208, 188, 255, 0.9)",
     borderRadius: "50%",
@@ -239,3 +238,5 @@ const TrackCard = ({
 };
 
 export default TrackCard;
+
+

@@ -36,8 +36,11 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
           albumTracks={albumTracks}
           setCurrentTrack={setCurrentTrack}
           setAlbumTracks={setAlbumTracks}
-        />
-      )}
+        onInfoClick={(track, albumTracks) => {
+          navigate("/now-playing", { state: { track, albumTracks } });
+        }}
+      />
+    )}
 
       {/* Footer */}
       <footer className="bg-gray-800 text-gray-400 text-sm py-4 text-center border-t border-gray-700 flex-shrink-0">
@@ -48,3 +51,7 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
 };
 
 export default Layout;
+
+
+
+

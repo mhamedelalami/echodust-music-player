@@ -165,11 +165,11 @@ const HomePage = () => {
         display: "flex", 
         alignItems: "center", 
         gap: "12px", 
-        marginBottom: "9rem", 
+        marginBottom: "5rem", 
         flexWrap: "wrap", 
         justifyContent: "center" 
       }}>
-        <span style={{ fontWeight: "500", color: "#213547" }}>BY</span>
+        <span style={{ fontWeight: "500", color: "#D0BCFF" }}>BY</span>
 
         {/* Mood Dropdown */}
         <div ref={moodRef} style={{ position: "relative" }}>
@@ -206,7 +206,7 @@ const HomePage = () => {
           )}
         </div>
 
-        <span style={{ fontWeight: "500", color: "#213547" }}>OR</span>
+        <span style={{ fontWeight: "500", color: "#D0BCFF" }}>OR</span>
 
         {/* Genre Dropdown */}
         <div ref={genreRef} style={{ position: "relative" }}>
