@@ -1,17 +1,17 @@
+// src/pages/NowPlayingPage.js
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import BackHomeButton from "../components/BackHomeButton";
-import SearchBar from "../components/SearchBar";
-import AlbumTrackList from "../components/AlbumTrackList"; // new component
+import AlbumTrackList from "../components/AlbumTrackList";
 
 export default function NowPlayingPage() {
   const location = useLocation();
-  const { track } = location.state || {}; // track passed from previous page
-
+  const { track } = location.state || {}; // track passed from navigation
   const [albumTracks, setAlbumTracks] = useState([]);
-  const [currentTrack, setCurrentTrack] = useState(track);
+  const [currentTrack, setCurrentTrack] = useState(track || null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Fetch album tracks when page loads or track changes
+  // Fetch album tracks when track changes
   useEffect(() => {
     if (track?.album?.id) {
       const fetchAlbumTracks = async () => {
@@ -29,51 +29,117 @@ export default function NowPlayingPage() {
 
   if (!track) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-        <p className="text-gray-400">No track selected.</p>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#111827",
+          color: "#ffffff",
+        }}
+      >
+        <p style={{ color: "#A1A1AA" }}>No track selected.</p>
         <BackHomeButton />
       </div>
     );
   }
 
+  // Toggle play/pause or switch track
   const handleTrackClick = (selectedTrack) => {
-    setCurrentTrack(selectedTrack);
+    if (!selectedTrack) return;
+    if (currentTrack?.id === selectedTrack.id) {
+      setIsPlaying(!isPlaying); // toggle play/pause
+    } else {
+      setCurrentTrack(selectedTrack);
+      setIsPlaying(true); // auto play new track
+    }
   };
 
-  <AlbumTrackList
-  tracks={albumTracks}
-  currentTrack={currentTrack}
-  onTrackClick={handleTrackClick}
-/>
-
   return (
-  <div className="min-h-screen flex flex-col bg-gray-900 text-white">
-    {/* Top bar */}
-    <div className="flex justify-between items-center p-4">
-      <BackHomeButton />
-      <div className="w-1/2">
-        {/* <SearchBar onSearch={(query) => console.log("Search:", query)} /> */}
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#111827",
+        color: "#ffffff",
+      }}
+    >
+      {/* Top bar */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px",
+        }}
+      >
+        <BackHomeButton />
+      </div>
+
+      {/* Album section */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          padding: "16px",
+          gap: "24px",
+          background: "linear-gradient(to bottom, #1e293b, #111827)",
+          borderRadius: "12px",
+          boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+          margin: "16px",
+        }}
+      >
+        {/* Album art */}
+        <div style={{ textAlign: "center" }}>
+          <img
+            src={currentTrack?.album?.cover_big}
+            alt={currentTrack?.album?.title || "Album art"}
+            style={{
+              width: "256px",
+              height: "256px",
+              borderRadius: "12px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              objectFit: "cover",
+              transition: "all 0.2s ease",
+            }}
+          />
+          <h2
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              color: "#ffffff",
+              marginTop: "12px",
+            }}
+          >
+            {currentTrack?.album?.title ?? "Album"}
+          </h2>
+        </div>
+
+        {/* Track list */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            maxHeight: "calc(100vh - 200px)",
+          }}
+        >
+          {albumTracks.length > 0 ? (
+            <AlbumTrackList
+              tracks={albumTracks}
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              onTrackClick={handleTrackClick}
+            />
+          ) : (
+            <p style={{ color: "#A1A1AA", textAlign: "center" }}>
+              Loading album tracks...
+            </p>
+          )}
+        </div>
       </div>
     </div>
-
-    {/* Album art */}
-    <div className="flex justify-center mt-4 cursor-pointer" onClick={() => setCurrentTrack(track)}>
-      <img
-        src={currentTrack.album.cover_big}
-        alt={currentTrack.album.title}
-        className="w-64 h-64 md:w-96 md:h-96 rounded-xl shadow-lg object-cover"
-      />
-    </div>
-
-    {/* Track list */}
-    <div className="flex-1 p-4 overflow-y-auto">
-      {albumTracks.length > 0 ? (
-        <AlbumTrackList tracks={albumTracks} currentTrack={currentTrack} onTrackClick={setCurrentTrack} />
-      ) : (
-        <p className="text-gray-400 text-center">Loading album tracks...</p>
-      )}
-    </div>
-  </div>
-);}
-
-
+  );
+}

@@ -64,10 +64,17 @@ export default function NowPlayingBar({
     if (index >= 0) {
       console.log("NowPlayingBar: Setting trackIndex to", index);
       setTrackIndex(index);
-      if (!isPlaying) {
-        console.log("NowPlayingBar: Attempting to play track", currentTrack.title);
-        audioRef.current.play().catch((error) => {
-          console.error("NowPlayingBar: Initial playback failed:", error);
+      if (audioRef.current.src !== currentTrack.preview) {
+        console.log("NowPlayingBar: Loading new track", currentTrack?.title);
+        audioRef.current.src = currentTrack.preview;
+        audioRef.current.volume = volume;
+        audioRef.current.load();
+        audioRef.current.play().then(() => {
+          console.log("NowPlayingBar: Auto-play succeeded after track change");
+          setIsPlaying(true);
+          setIsPlayingParent?.(true);
+        }).catch((error) => {
+          console.error("NowPlayingBar: Auto-play failed after track change:", error);
           setIsPlaying(false);
           setIsPlayingParent?.(false);
         });
@@ -75,7 +82,7 @@ export default function NowPlayingBar({
     } else {
       console.log("NowPlayingBar: Current track not found in albumTracks");
     }
-  }, [currentTrack, albumTracks, setIsPlayingParent]);
+  }, [currentTrack, albumTracks, setIsPlayingParent, volume]);
 
   useEffect(() => {
     if (!albumTracks || albumTracks.length === 0 || !audioRef.current) {
@@ -90,20 +97,21 @@ export default function NowPlayingBar({
       return;
     }
     if (audioRef.current.src !== track.preview) {
-      console.log("NowPlayingBar: Loading new track", track.title);
+      console.log("NowPlayingBar: Loading new track", track?.title);
       audioRef.current.src = track.preview;
       audioRef.current.volume = volume;
       audioRef.current.load();
-      if (isPlaying) {
-        console.log("NowPlayingBar: Playing loaded track");
-        audioRef.current.play().catch((error) => {
-          console.error("NowPlayingBar: Playback failed:", error);
-          setIsPlaying(false);
-          setIsPlayingParent?.(false);
-        });
-      }
+      audioRef.current.play().then(() => {
+        console.log("NowPlayingBar: Auto-play succeeded after track index change");
+        setIsPlaying(true);
+        setIsPlayingParent?.(true);
+      }).catch((error) => {
+        console.error("NowPlayingBar: Auto-play failed after track index change:", error);
+        setIsPlaying(false);
+        setIsPlayingParent?.(false);
+      });
     }
-  }, [trackIndex, albumTracks, volume, isPlaying, setIsPlayingParent]);
+  }, [trackIndex, albumTracks, setIsPlayingParent, volume]);
 
   const handleNextTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) {
@@ -115,11 +123,9 @@ export default function NowPlayingBar({
       const nextTrack = albumTracks[nextIndex];
       console.log("NowPlayingBar: Moving to next track", nextTrack?.title);
       setCurrentTrack?.(nextTrack);
-      setIsPlaying(true);
-      setIsPlayingParent?.(true);
       return nextIndex;
     });
-  }, [albumTracks, setCurrentTrack, setIsPlayingParent]);
+  }, [albumTracks, setCurrentTrack]);
 
   const handlePrevTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) {
@@ -131,11 +137,9 @@ export default function NowPlayingBar({
       const prevTrack = albumTracks[prevIndex];
       console.log("NowPlayingBar: Moving to previous track", prevTrack?.title);
       setCurrentTrack?.(prevTrack);
-      setIsPlaying(true);
-      setIsPlayingParent?.(true);
       return prevIndex;
     });
-  }, [albumTracks, setCurrentTrack, setIsPlayingParent]);
+  }, [albumTracks, setCurrentTrack]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -157,12 +161,7 @@ export default function NowPlayingBar({
       return;
     }
     console.log("NowPlayingBar: Info clicked for track", track.title);
-    setCurrentTrack?.(track);
-    setAlbumTracks?.(albumTracks);
     navigate("/now-playing", { state: { track, albumTracks } });
-    if (!isPlaying) {
-      togglePlay();
-    }
   };
 
   const handleVolumeChange = (e) => {
@@ -228,7 +227,7 @@ export default function NowPlayingBar({
     alignItems: "center",
     height: "100%",
     padding: "8px 16px",
-    justifyContent: "space-between", // Distribute space between track info, controls, and volume
+    justifyContent: "space-between",
   };
 
   const trackInfoStyle = {
@@ -240,7 +239,7 @@ export default function NowPlayingBar({
     transition: "all 0.2s ease",
     minWidth: "160px",
     flex: "0 0 auto",
-    marginRight: "auto", // Push to the left with original spacing
+    marginRight: "auto",
   };
 
   const albumArtStyle = {
@@ -267,8 +266,8 @@ export default function NowPlayingBar({
   const controlsContainerStyle = {
     display: "flex",
     alignItems: "center",
-    gap: "6px", // Tight gap
-    marginLeft: "20px", // Shift left slightly
+    gap: "6px",
+    marginLeft: "20px",
   };
 
   const getControlButtonStyle = (buttonType, isActive = false) => ({
@@ -292,8 +291,8 @@ export default function NowPlayingBar({
   const progressContainerStyle = {
     display: "flex",
     alignItems: "center",
-    gap: "4px", // Tight gap
-    width: "800px", // Extended width for a much longer status bar (adjust this value to change length)
+    gap: "4px",
+    width: "800px",
     maxWidth: "800px",
   };
 
@@ -330,7 +329,7 @@ export default function NowPlayingBar({
     alignItems: "center",
     minWidth: "80px",
     flex: "0 0 auto",
-    marginLeft: "auto", // Push to the right with original spacing
+    marginLeft: "auto",
   };
 
   const volumeButtonStyle = {
@@ -385,210 +384,138 @@ export default function NowPlayingBar({
   }
 
   return (
-    <>
-      <style>
-        {`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          @keyframes pulse {
-            0%, 100% { box-shadow: 0 2px 6px rgba(208, 188, 255, 0.3); }
-            50% { box-shadow: 0 4px 10px rgba(91, 33, 182, 0.4); }
-          }
-          input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            background: transparent;
-          }
-          input[type="range"]::-webkit-slider-track {
-            background: #E5E7EB;
-            height: 3px;
-            border-radius: 2px;
-          }
-          input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 12px;
-            width: 12px;
-            border-radius: 50%;
-            background: #5B21B6;
-            cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            transition: all 0.1s ease;
-          }
-          input[type="range"]::-webkit-slider-thumb:hover {
-            background: #4C1D95;
-            transform: scale(1.2);
-            box-shadow: 0 2px 4px rgba(91, 33, 182, 0.2);
-          }
-          input[type="range"]::-moz-range-track {
-            background: #E5E7EB;
-            height: 3px;
-            border-radius: 2px;
-            border: none;
-          }
-          input[type="range"]::-moz-range-thumb {
-            height: 12px;
-            width: 12px;
-            border-radius: 50%;
-            background: #5B21B6;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-          }
-          @media (max-width: 640px) {
-            .player-bar-mobile {
-              flex-direction: column;
-              align-items: center;
-              padding: 8px;
-              height: auto;
-            }
-            .track-info-mobile {
-              margin-bottom: 4px;
-            }
-            .controls-mobile {
-              margin: 0;
-            }
-            .volume-mobile {
-              margin-top: 4px;
-            }
-          }
-        `}
-      </style>
-      <div style={playerBarStyle}>
-        <div style={topProgressStyle} onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const percent = ((e.clientX - rect.left) / rect.width) * 100;
-          if (audioRef.current) {
-            audioRef.current.currentTime = (percent / 100) * audioRef.current.duration;
-            setProgress(percent);
-          }
-        }}>
-          <div style={topProgressFillStyle} />
-        </div>
-        <div style={mainContentStyle}>
-          <div
-            style={trackInfoStyle}
-            onClick={handleInfoClick}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(208, 188, 255, 0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <img
-              src={track.album?.cover_small || ""}
-              alt={track.title || "Unknown Title"}
-              style={albumArtStyle}
-            />
-            <div style={trackTextStyle}>
-              <p
-                style={{
-                  fontWeight: "600",
-                  color: "#213547",
-                  margin: 0,
-                  fontSize: "12px",
-                  lineHeight: "1.2",
-                }}
-              >
-                {track.title || "Unknown Title"}
-              </p>
-              <p
-                style={{
-                  color: "#6B7280",
-                  fontSize: "10px",
-                  margin: 0,
-                  lineHeight: "1.2",
-                }}
-              >
-                {track.artist?.name || "Unknown Artist"}
-              </p>
-            </div>
-          </div>
-          <div style={controlsContainerStyle}>
-            <button
-              onClick={handlePrevTrack}
-              style={getControlButtonStyle("prev")}
-              onMouseEnter={() => setHoveredButton("prev")}
-              onMouseLeave={() => setHoveredButton(null)}
+    <div style={playerBarStyle}>
+      <div style={topProgressStyle} onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const percent = ((e.clientX - rect.left) / rect.width) * 100;
+        if (audioRef.current) {
+          audioRef.current.currentTime = (percent / 100) * audioRef.current.duration;
+          setProgress(percent);
+        }
+      }}>
+        <div style={topProgressFillStyle} />
+      </div>
+      <div style={mainContentStyle}>
+        <div
+          style={trackInfoStyle}
+          onClick={handleInfoClick}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(208, 188, 255, 0.1)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          <img
+            src={track.album?.cover_small || ""}
+            alt={track.title || "Unknown Title"}
+            style={albumArtStyle}
+          />
+          <div style={trackTextStyle}>
+            <p
+              style={{
+                fontWeight: "600",
+                color: "#213547",
+                margin: 0,
+                fontSize: "12px",
+                lineHeight: "1.2",
+              }}
             >
-              ⏮
-            </button>
-            <button
-              onClick={togglePlay}
-              style={getControlButtonStyle("play", isPlaying)}
-              onMouseEnter={() => setHoveredButton("play")}
-              onMouseLeave={() => setHoveredButton(null)}
+              {track.title || "Unknown Title"}
+            </p>
+            <p
+              style={{
+                color: "#6B7280",
+                fontSize: "10px",
+                margin: 0,
+                lineHeight: "1.2",
+              }}
             >
-              {isPlaying ? "⏸" : "▶"}
-            </button>
-            <button
-              onClick={handleNextTrack}
-              style={getControlButtonStyle("next")}
-              onMouseEnter={() => setHoveredButton("next")}
-              onMouseLeave={() => setHoveredButton(null)}
-            >
-              ⏭
-            </button>
-            <div style={progressContainerStyle}>
-              <span style={timeStyle}>{formatTime(currentTime)}</span>
-              <div
-                style={progressBarStyle}
-                onMouseEnter={() => setProgressHover(true)}
-                onMouseLeave={() => setProgressHover(false)}
-              >
-                <div style={progressFillStyle} />
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={progress}
-                  onChange={handleSeek}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    opacity: 0,
-                    cursor: "pointer",
-                  }}
-                />
-              </div>
-              <span style={timeStyle}>{formatTime(duration)}</span>
-            </div>
-          </div>
-          <div
-            style={volumeContainerStyle}
-            onMouseEnter={() => {
-              setShowVolumeSlider(true);
-              setIsVolumeHovered(true);
-            }}
-            onMouseLeave={() => {
-              setShowVolumeSlider(false);
-              setIsVolumeHovered(false);
-            }}
-          >
-            <button style={volumeButtonStyle}>
-              {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={handleVolumeChange}
-              style={volumeSliderStyle}
-            />
+              {track.artist?.name || "Unknown Artist"}
+            </p>
           </div>
         </div>
-        <div style={{ display: "none" }}>
-          <audio ref={audioRef} />
+        <div style={controlsContainerStyle}>
+          <button
+            onClick={handlePrevTrack}
+            style={getControlButtonStyle("prev")}
+            onMouseEnter={() => setHoveredButton("prev")}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            ⏮
+          </button>
+          <button
+            onClick={togglePlay}
+            style={getControlButtonStyle("play", isPlaying)}
+            onMouseEnter={() => setHoveredButton("play")}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            {isPlaying ? "⏸" : "▶"}
+          </button>
+          <button
+            onClick={handleNextTrack}
+            style={getControlButtonStyle("next")}
+            onMouseEnter={() => setHoveredButton("next")}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            ⏭
+          </button>
+          <div style={progressContainerStyle}>
+            <span style={timeStyle}>{formatTime(currentTime)}</span>
+            <div
+              style={progressBarStyle}
+              onMouseEnter={() => setProgressHover(true)}
+              onMouseLeave={() => setProgressHover(false)}
+            >
+              <div style={progressFillStyle} />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={progress}
+                onChange={handleSeek}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+              />
+            </div>
+            <span style={timeStyle}>{formatTime(duration)}</span>
+          </div>
+        </div>
+        <div
+          style={volumeContainerStyle}
+          onMouseEnter={() => {
+            setShowVolumeSlider(true);
+            setIsVolumeHovered(true);
+          }}
+          onMouseLeave={() => {
+            setShowVolumeSlider(false);
+            setIsVolumeHovered(false);
+          }}
+        >
+          <button style={volumeButtonStyle}>
+            {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={handleVolumeChange}
+            style={volumeSliderStyle}
+          />
         </div>
       </div>
-    </>
+      <div style={{ display: "none" }}>
+        <audio ref={audioRef} />
+      </div>
+    </div>
   );
 }

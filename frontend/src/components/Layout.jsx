@@ -65,3 +65,4 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
 };
 
 export default Layout;
+

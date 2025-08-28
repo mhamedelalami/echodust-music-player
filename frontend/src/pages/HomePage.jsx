@@ -67,21 +67,16 @@ const HomePage = () => {
     }
   };
 
-  const handleTrackCardClick = (track) => {
-    console.log("HomePage: Track card clicked", track?.title);
-    setCurrentTrack(track);
-    setAlbumTracks(popularTracks);
-  };
-
   const handlePlayButtonClick = (track) => {
     console.log("HomePage: Play button clicked", track?.title);
     if (currentTrack?.id === track?.id && togglePlay) {
       console.log("HomePage: Calling togglePlay for current track");
       togglePlay();
     } else {
-      console.log("HomePage: Setting new track");
+      console.log("HomePage: Setting new track and playing");
       setCurrentTrack(track);
       setAlbumTracks(popularTracks);
+      // Remove togglePlay call for new track; NowPlayingBar will auto-play on change
     }
   };
 
@@ -152,8 +147,9 @@ const HomePage = () => {
       <div
         style={{
           textAlign: "center",
-          marginBottom: "2.5rem",
+          marginBottom: "5rem",
           padding: "0 1rem",
+          marginTop: "7rem",
         }}
       >
         <h1
@@ -303,7 +299,6 @@ const HomePage = () => {
                     variant="horizontal"
                     size="medium"
                     showPlayButton={true}
-                    onClick={() => handleTrackCardClick(track)}
                     onPlayClick={() => handlePlayButtonClick(track)}
                     isPlaying={currentTrack?.id === track?.id && isPlaying}
                     currentTrack={currentTrack}
@@ -360,5 +355,4 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
 
