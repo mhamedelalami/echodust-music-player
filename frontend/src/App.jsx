@@ -26,7 +26,7 @@ function App() {
         >
           <Route index element={<HomePage />} />
           <Route path="search/:query" element={<SearchResultsPage />} />
-           <Route path="now-playing" element={<NowPlayingPage />} />
+          <Route path="now-playing" element={<NowPlayingPage />} />
         </Route>
       </Routes>
     </Router>

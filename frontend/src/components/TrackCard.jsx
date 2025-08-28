@@ -1,65 +1,60 @@
 import React, { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { FiPlay } from "react-icons/fi";
+import { FiPlay, FiPause } from "react-icons/fi";
 
-const TrackCard = ({ 
-  track, 
-  albumTracks, 
-  showAlbumArt = true, 
+const TrackCard = ({
+  track,
+  albumTracks,
+  showAlbumArt = true,
   onClick,
-  variant = "grid", // "grid" or "horizontal"
-  size = "medium", // "small", "medium", "large"
+  variant = "grid",
+  size = "medium",
   showPlayButton = true,
   onPlayClick,
-  style = {} // Allow external styling
+  isPlaying = false,
+  currentTrack,
+  togglePlay,
+  style = {},
 }) => {
   const navigate = useNavigate();
   const { setCurrentTrack, setAlbumTracks } = useOutletContext();
   const [isHovered, setIsHovered] = useState(false);
 
   const handleCardClick = () => {
-    console.log("=== TRACKCARD CLICK ===");
-    console.log("Track clicked:", track.title);
-    console.log("albumTracks prop:", albumTracks?.length || "undefined");
-    console.log("onClick prop:", typeof onClick);
+    console.log("TrackCard: Clicked", track?.title);
+    console.log("TrackCard: albumTracks length", albumTracks?.length || "undefined");
+    console.log("TrackCard: onClick exists", !!onClick);
 
-    // Use the onClick prop if provided (from HomePage)
     if (onClick) {
-      console.log("Using onClick prop from parent");
+      console.log("TrackCard: Using onClick prop");
       onClick();
     } else {
-      // Fallback to default behavior
-      console.log("Using default TrackCard behavior");
+      console.log("TrackCard: Using default behavior");
       setCurrentTrack(track);
       setAlbumTracks(albumTracks || [track]);
     }
-    
-    // ALWAYS navigate - this was the key in your working version
     navigate("/now-playing", { state: { track, albumTracks } });
   };
 
   const handlePlayClick = (e) => {
     e.stopPropagation();
-    console.log("=== TRACKCARD PLAY CLICK ===");
-    console.log("Play button clicked for:", track.title);
-    console.log("albumTracks prop:", albumTracks?.length || "undefined");
+    console.log("TrackCard: Play button clicked", track?.title);
+    console.log("TrackCard: Current track ID", currentTrack?.id, "Clicked track ID", track?.id);
+    console.log("TrackCard: isPlaying", isPlaying, "togglePlay exists", !!togglePlay);
 
-    // Use onPlayClick prop if provided, otherwise use onClick prop
     if (onPlayClick) {
-      console.log("Using onPlayClick prop from parent");
+      console.log("TrackCard: Using onPlayClick prop");
       onPlayClick();
-    } else if (onClick) {
-      console.log("Using onClick prop from parent for play button");
-      onClick();
+    } else if (currentTrack?.id === track?.id && togglePlay) {
+      console.log("TrackCard: Toggling play/pause");
+      togglePlay();
     } else {
-      // Fallback to default behavior
-      console.log("Using default TrackCard play behavior");
+      console.log("TrackCard: Setting new track");
       setCurrentTrack(track);
       setAlbumTracks(albumTracks || [track]);
     }
   };
 
-  // Size configurations
   const sizeConfig = {
     small: {
       width: "140px",
@@ -68,7 +63,7 @@ const TrackCard = ({
       artistSize: "10px",
       padding: "8px",
       playButtonSize: 16,
-      playButtonPadding: "8px"
+      playButtonPadding: "8px",
     },
     medium: {
       width: "180px",
@@ -77,7 +72,7 @@ const TrackCard = ({
       artistSize: "12px",
       padding: "12px 8px",
       playButtonSize: 20,
-      playButtonPadding: "12px"
+      playButtonPadding: "12px",
     },
     large: {
       width: "220px",
@@ -86,13 +81,12 @@ const TrackCard = ({
       artistSize: "14px",
       padding: "16px 12px",
       playButtonSize: 24,
-      playButtonPadding: "14px"
-    }
+      playButtonPadding: "14px",
+    },
   };
 
   const config = sizeConfig[size];
 
-  // Base card styles
   const getCardStyle = () => ({
     position: "relative",
     minWidth: variant === "horizontal" ? config.width : "auto",
@@ -103,28 +97,24 @@ const TrackCard = ({
     flexShrink: variant === "horizontal" ? 0 : 1,
     transition: "all 0.3s ease",
     transform: isHovered ? "translateY(-4px)" : "translateY(0)",
-    boxShadow: isHovered 
-      ? "0 8px 25px rgba(0,0,0,0.15)" 
-      : "0 2px 8px rgba(0,0,0,0.1)",
+    boxShadow: isHovered ? "0 8px 25px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.1)",
     backgroundColor: "#ffffff",
-    ...style
+    ...style,
   });
 
-  // Album art container styles
   const getAlbumArtStyle = () => ({
     position: "relative",
     width: "100%",
     height: variant === "grid" ? "auto" : config.imageHeight,
     paddingTop: variant === "grid" ? "100%" : "0",
     backgroundColor: "#E5E7EB",
-    backgroundImage: `url(${track.album?.cover_medium || track.album?.cover})`,
+    backgroundImage: `url(${track?.album?.cover_medium || track?.album?.cover || ""})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     borderRadius: variant === "horizontal" ? "8px" : "0",
     overflow: "hidden",
   });
 
-  // Play button styles
   const getPlayButtonStyle = () => ({
     position: "absolute",
     top: "50%",
@@ -135,21 +125,18 @@ const TrackCard = ({
     padding: config.playButtonPadding,
     transition: "all 0.3s ease",
     opacity: isHovered ? 1 : 0.7,
-    transform: isHovered 
-      ? "translate(-50%, -50%) scale(1.1)" 
-      : "translate(-50%, -50%) scale(1)",
+    transform: isHovered ? "translate(-50%, -50%) scale(1.1)" : "translate(-50%, -50%) scale(1)",
     backdropFilter: "blur(10px)",
     border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2
+    zIndex: 2,
   });
 
-  // Track info styles
   const getTrackInfoStyle = () => ({
-    padding: config.padding
+    padding: config.padding,
   });
 
   const getTitleStyle = () => ({
@@ -159,7 +146,7 @@ const TrackCard = ({
     margin: "0 0 4px 0",
     overflow: "hidden",
     textOverflow: "ellipsis",
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
   });
 
   const getArtistStyle = () => ({
@@ -168,10 +155,14 @@ const TrackCard = ({
     margin: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
   });
 
-  // For grid variant without custom play button (fallback to old style)
+  if (!track) {
+    console.log("TrackCard: Skipping render - no track");
+    return null;
+  }
+
   if (variant === "grid" && !showPlayButton) {
     return (
       <div
@@ -180,12 +171,10 @@ const TrackCard = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {showAlbumArt && (
-          <div style={getAlbumArtStyle()} />
-        )}
+        {showAlbumArt && <div style={getAlbumArtStyle()} />}
         <div style={getTrackInfoStyle()}>
-          <h3 style={getTitleStyle()}>{track.title}</h3>
-          <p style={getArtistStyle()}>{track.artist.name}</p>
+          <h3 style={getTitleStyle()}>{track.title || "Unknown Title"}</h3>
+          <p style={getArtistStyle()}>{track.artist?.name || "Unknown Artist"}</p>
         </div>
         <button
           style={{
@@ -198,11 +187,11 @@ const TrackCard = ({
             color: "#ffffff",
             fontWeight: "bold",
             border: "none",
-            cursor: "pointer"
+            cursor: "pointer",
           }}
           onClick={handlePlayClick}
         >
-          ▶
+          {isPlaying ? "⏸" : "▶"}
         </button>
       </div>
     );
@@ -223,20 +212,22 @@ const TrackCard = ({
               className="play-button"
               onClick={handlePlayClick}
             >
-              <FiPlay size={config.playButtonSize} />
+              {isPlaying ? (
+                <FiPause size={config.playButtonSize} />
+              ) : (
+                <FiPlay size={config.playButtonSize} />
+              )}
             </button>
           )}
         </div>
       )}
-      
       <div style={getTrackInfoStyle()}>
-        <h3 style={getTitleStyle()}>{track.title}</h3>
-        <p style={getArtistStyle()}>{track.artist.name}</p>
+        <h3 style={getTitleStyle()}>{track.title || "Unknown Title"}</h3>
+        <p style={getArtistStyle()}>{track.artist?.name || "Unknown Artist"}</p>
       </div>
     </div>
   );
 };
 
 export default TrackCard;
-
 

@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 export default function NowPlayingBar({
   currentTrack,
-  albumTracks,
+  albumTracks = [],
   setCurrentTrack,
   setAlbumTracks,
-  onInfoClick
+  setIsPlayingParent,
+  setTogglePlay,
+  onInfoClick,
 }) {
   const navigate = useNavigate();
   const audioRef = useRef(null);
@@ -19,75 +21,128 @@ export default function NowPlayingBar({
   const [hoveredButton, setHoveredButton] = useState(null);
   const [progressHover, setProgressHover] = useState(false);
 
-  // Keep trackIndex in sync with currentTrack
-  useEffect(() => {
-    if (!albumTracks || !currentTrack) return;
-    const index = albumTracks.findIndex((t) => t.id === currentTrack.id);
-    setTrackIndex(index >= 0 ? index : 0);
-    setIsPlaying(true);
-  }, [currentTrack, albumTracks]);
-
-  // Load and play when trackIndex changes
-  useEffect(() => {
-    if (!albumTracks || albumTracks.length === 0) return;
-    const track = albumTracks[trackIndex];
-    if (!track || !audioRef.current) return;
-
-    if (audioRef.current.src !== track.preview) {
-      audioRef.current.src = track.preview;
-      audioRef.current.volume = volume;
-      if (isPlaying) {
-        audioRef.current.play().catch(() => setIsPlaying(false));
-      }
+  const togglePlay = useCallback(() => {
+    if (!audioRef.current) {
+      console.log("NowPlayingBar: togglePlay - No audioRef");
+      return;
     }
-  }, [trackIndex, albumTracks, volume, isPlaying]);
-
-  // Toggle play/pause
-  const togglePlay = () => {
-    if (!audioRef.current) return;
+    console.log("NowPlayingBar: togglePlay called, isPlaying:", isPlaying);
     if (isPlaying) {
+      console.log("NowPlayingBar: Pausing audio");
       audioRef.current.pause();
       setIsPlaying(false);
+      setIsPlayingParent?.(false);
     } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      console.log("NowPlayingBar: Playing audio");
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsPlayingParent?.(true);
+      }).catch((error) => {
+        console.error("NowPlayingBar: Playback failed:", error);
+        setIsPlaying(false);
+        setIsPlayingParent?.(false);
+      });
     }
-  };
+  }, [isPlaying, setIsPlayingParent]);
 
-  // Next track
+  useEffect(() => {
+    console.log("NowPlayingBar: Mounting with currentTrack", currentTrack?.title, "albumTracks length", albumTracks.length);
+    if (setTogglePlay) {
+      console.log("NowPlayingBar: Setting togglePlay");
+      setTogglePlay(togglePlay);
+    }
+  }, [setTogglePlay, togglePlay]);
+
+  useEffect(() => {
+    if (!albumTracks || albumTracks.length === 0 || !currentTrack || !audioRef.current) {
+      console.log("NowPlayingBar: Missing required data or audioRef");
+      setIsPlaying(false);
+      setIsPlayingParent?.(false);
+      return;
+    }
+    const index = albumTracks.findIndex((t) => t?.id === currentTrack?.id);
+    if (index >= 0) {
+      console.log("NowPlayingBar: Setting trackIndex to", index);
+      setTrackIndex(index);
+      if (!isPlaying) {
+        console.log("NowPlayingBar: Attempting to play track", currentTrack.title);
+        audioRef.current.play().catch((error) => {
+          console.error("NowPlayingBar: Initial playback failed:", error);
+          setIsPlaying(false);
+          setIsPlayingParent?.(false);
+        });
+      }
+    } else {
+      console.log("NowPlayingBar: Current track not found in albumTracks");
+    }
+  }, [currentTrack, albumTracks, setIsPlayingParent]);
+
+  useEffect(() => {
+    if (!albumTracks || albumTracks.length === 0 || !audioRef.current) {
+      console.log("NowPlayingBar: No tracks or audioRef available");
+      return;
+    }
+    const track = albumTracks[trackIndex];
+    if (!track || !track.preview) {
+      console.log("NowPlayingBar: Invalid track or missing preview");
+      setIsPlaying(false);
+      setIsPlayingParent?.(false);
+      return;
+    }
+    if (audioRef.current.src !== track.preview) {
+      console.log("NowPlayingBar: Loading new track", track.title);
+      audioRef.current.src = track.preview;
+      audioRef.current.volume = volume;
+      audioRef.current.load();
+      if (isPlaying) {
+        console.log("NowPlayingBar: Playing loaded track");
+        audioRef.current.play().catch((error) => {
+          console.error("NowPlayingBar: Playback failed:", error);
+          setIsPlaying(false);
+          setIsPlayingParent?.(false);
+        });
+      }
+    }
+  }, [trackIndex, albumTracks, volume, isPlaying, setIsPlayingParent]);
+
   const handleNextTrack = useCallback(() => {
-    if (!albumTracks || albumTracks.length === 0) return;
-
+    if (!albumTracks || albumTracks.length === 0) {
+      console.log("NowPlayingBar: No tracks for next");
+      return;
+    }
     setTrackIndex((prev) => {
       const nextIndex = (prev + 1) % albumTracks.length;
       const nextTrack = albumTracks[nextIndex];
+      console.log("NowPlayingBar: Moving to next track", nextTrack?.title);
       setCurrentTrack?.(nextTrack);
       setIsPlaying(true);
+      setIsPlayingParent?.(true);
       return nextIndex;
     });
-  }, [albumTracks, setCurrentTrack]);
+  }, [albumTracks, setCurrentTrack, setIsPlayingParent]);
 
-  // Prev track
   const handlePrevTrack = useCallback(() => {
-    if (!albumTracks || albumTracks.length === 0) return;
-
+    if (!albumTracks || albumTracks.length === 0) {
+      console.log("NowPlayingBar: No tracks for previous");
+      return;
+    }
     setTrackIndex((prev) => {
       const prevIndex = (prev - 1 + albumTracks.length) % albumTracks.length;
       const prevTrack = albumTracks[prevIndex];
+      console.log("NowPlayingBar: Moving to previous track", prevTrack?.title);
       setCurrentTrack?.(prevTrack);
       setIsPlaying(true);
+      setIsPlayingParent?.(true);
       return prevIndex;
     });
-  }, [albumTracks, setCurrentTrack]);
+  }, [albumTracks, setCurrentTrack, setIsPlayingParent]);
 
-  // Progress bar update + auto-next
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
     const updateProgress = () => setProgress((audio.currentTime / audio.duration) * 100 || 0);
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("ended", handleNextTrack);
-
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
       audio.removeEventListener("ended", handleNextTrack);
@@ -96,16 +151,23 @@ export default function NowPlayingBar({
 
   const track = albumTracks && albumTracks[trackIndex] ? albumTracks[trackIndex] : null;
 
-  // Navigate to NowPlayingPage
   const handleInfoClick = () => {
+    if (!track) {
+      console.log("NowPlayingBar: No track for info click");
+      return;
+    }
+    console.log("NowPlayingBar: Info clicked for track", track.title);
     setCurrentTrack?.(track);
     setAlbumTracks?.(albumTracks);
     navigate("/now-playing", { state: { track, albumTracks } });
-    setIsPlaying(true);
+    if (!isPlaying) {
+      togglePlay();
+    }
   };
 
   const handleVolumeChange = (e) => {
     const val = parseFloat(e.target.value);
+    console.log("NowPlayingBar: Volume changed to", val);
     setVolume(val);
     if (audioRef.current) audioRef.current.volume = val;
   };
@@ -113,6 +175,7 @@ export default function NowPlayingBar({
   const handleSeek = (e) => {
     const val = parseFloat(e.target.value);
     if (audioRef.current) {
+      console.log("NowPlayingBar: Seeking to", val);
       audioRef.current.currentTime = (val / 100) * audioRef.current.duration;
       setProgress(val);
     }
@@ -122,172 +185,204 @@ export default function NowPlayingBar({
     if (!seconds || isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const currentTime = audioRef.current ? audioRef.current.currentTime : 0;
   const duration = audioRef.current ? audioRef.current.duration : 0;
 
-  // Base styles
   const playerBarStyle = {
     position: "fixed",
     bottom: 0,
     left: 0,
     right: 0,
+    height: "70px",
     background: "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)",
     backdropFilter: "blur(20px)",
     WebkitBackdropFilter: "blur(20px)",
     borderTop: "1px solid rgba(208, 188, 255, 0.3)",
-    boxShadow: "0 -8px 32px rgba(91, 33, 182, 0.1), 0 -2px 8px rgba(0,0,0,0.05)",
+    boxShadow: "0 -4px 12px rgba(91, 33, 182, 0.05)",
     zIndex: 1000,
-    padding: "16px 20px",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+    overflow: "hidden",
+  };
+
+  const topProgressStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "2px",
+    background: "rgba(229, 231, 235, 0.6)",
+    cursor: "pointer",
+  };
+
+  const topProgressFillStyle = {
+    height: "100%",
+    background: "linear-gradient(90deg, #D0BCFF 0%, #5B21B6 100%)",
+    width: `${progress}%`,
+    transition: "width 0.1s ease",
+  };
+
+  const mainContentStyle = {
+    display: "flex",
+    alignItems: "center",
+    height: "100%",
+    padding: "8px 16px",
+    justifyContent: "space-between", // Distribute space between track info, controls, and volume
   };
 
   const trackInfoStyle = {
     display: "flex",
     alignItems: "center",
     cursor: "pointer",
-    padding: "8px",
-    borderRadius: "12px",
-    transition: "all 0.3s ease",
-    minWidth: "240px",
-    flex: "0 0 auto"
+    padding: "4px 8px",
+    borderRadius: "8px",
+    transition: "all 0.2s ease",
+    minWidth: "160px",
+    flex: "0 0 auto",
+    marginRight: "auto", // Push to the left with original spacing
   };
 
   const albumArtStyle = {
-    width: "56px",
-    height: "56px",
-    borderRadius: "12px",
+    width: "40px",
+    height: "40px",
+    borderRadius: "6px",
     objectFit: "cover",
-    marginRight: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    transition: "all 0.3s ease",
-    animation: isPlaying ? "spin 8s linear infinite" : "none"
+    marginRight: "8px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+    transition: "all 0.2s ease",
+    animation: isPlaying ? "spin 8s linear infinite" : "none",
+  };
+
+  const trackTextStyle = {
+    display: "-webkit-box",
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "120px",
   };
 
   const controlsContainerStyle = {
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
-    flex: 1,
-    maxWidth: "600px",
-    margin: "0 20px"
-  };
-
-  const controlsStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    marginBottom: "12px"
+    gap: "6px", // Tight gap
+    marginLeft: "20px", // Shift left slightly
   };
 
   const getControlButtonStyle = (buttonType, isActive = false) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: buttonType === 'play' ? "48px" : "40px",
-    height: buttonType === 'play' ? "48px" : "40px",
+    width: buttonType === "play" ? "36px" : "32px",
+    height: buttonType === "play" ? "36px" : "32px",
     borderRadius: "50%",
     border: "none",
     cursor: "pointer",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    fontSize: buttonType === 'play' ? "16px" : "14px",
-    background: buttonType === 'play' 
-      ? (hoveredButton === buttonType ? "#5B21B6" : "#D0BCFF")
-      : "transparent",
-    color: buttonType === 'play' 
-      ? "#ffffff" 
-      : (hoveredButton === buttonType ? "#5B21B6" : "#6B7280"),
-    boxShadow: buttonType === 'play' 
-      ? (hoveredButton === buttonType ? "0 8px 20px rgba(91, 33, 182, 0.3)" : "0 4px 12px rgba(208, 188, 255, 0.4)")
-      : (hoveredButton === buttonType ? "0 4px 12px rgba(91, 33, 182, 0.2)" : "none"),
-    transform: hoveredButton === buttonType 
-      ? (buttonType === 'play' ? "scale(1.05)" : "scale(1.1)") 
-      : "scale(1)",
-    animation: isPlaying && buttonType === 'play' ? "pulse 2s infinite" : "none"
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    fontSize: buttonType === "play" ? "14px" : "12px",
+    background: buttonType === "play" ? (hoveredButton === buttonType ? "#5B21B6" : "#D0BCFF") : "transparent",
+    color: buttonType === "play" ? "#ffffff" : (hoveredButton === buttonType ? "#5B21B6" : "#6B7280"),
+    boxShadow: buttonType === "play" ? (hoveredButton === buttonType ? "0 4px 12px rgba(91, 33, 182, 0.3)" : "0 2px 6px rgba(208, 188, 255, 0.4)") : "none",
+    transform: hoveredButton === buttonType ? "scale(1.05)" : "scale(1)",
+    animation: isPlaying && buttonType === "play" ? "pulse 2s infinite" : "none",
   });
 
   const progressContainerStyle = {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
-    width: "100%",
-    maxWidth: "500px"
+    gap: "4px", // Tight gap
+    width: "800px", // Extended width for a much longer status bar (adjust this value to change length)
+    maxWidth: "800px",
   };
 
   const progressBarStyle = {
     flex: 1,
-    height: "6px",
-    background: "linear-gradient(to right, #E5E7EB 0%, #E5E7EB 100%)",
-    borderRadius: "3px",
+    height: "4px",
+    background: "#E5E7EB",
+    borderRadius: "2px",
     position: "relative",
     cursor: "pointer",
-    transition: "all 0.2s ease",
-    transform: progressHover ? "scaleY(1.2)" : "scaleY(1)"
+    transition: "all 0.1s ease",
+    transform: progressHover ? "scaleY(1.1)" : "scaleY(1)",
   };
 
   const progressFillStyle = {
     height: "100%",
     background: "linear-gradient(90deg, #D0BCFF 0%, #5B21B6 100%)",
-    borderRadius: "3px",
+    borderRadius: "2px",
     width: `${progress}%`,
     transition: "width 0.1s ease",
-    boxShadow: progressHover ? "0 0 8px rgba(208, 188, 255, 0.6)" : "none"
+    boxShadow: progressHover ? "0 0 4px rgba(208, 188, 255, 0.4)" : "none",
   };
 
   const timeStyle = {
-    fontSize: "12px",
+    fontSize: "10px",
     color: "#6B7280",
     fontWeight: "500",
-    minWidth: "35px",
-    textAlign: "center"
+    minWidth: "30px",
+    textAlign: "center",
   };
 
   const volumeContainerStyle = {
     display: "flex",
     alignItems: "center",
-    position: "relative",
-    minWidth: "120px",
-    flex: "0 0 auto"
+    minWidth: "80px",
+    flex: "0 0 auto",
+    marginLeft: "auto", // Push to the right with original spacing
   };
 
   const volumeButtonStyle = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "40px",
-    height: "40px",
+    width: "28px",
+    height: "28px",
     borderRadius: "50%",
     border: "none",
     background: "transparent",
     cursor: "pointer",
-    fontSize: "18px",
+    fontSize: "14px",
     color: isVolumeHovered ? "#5B21B6" : "#6B7280",
-    transition: "all 0.3s ease",
-    transform: isVolumeHovered ? "scale(1.1)" : "scale(1)"
+    transition: "all 0.2s ease",
+    transform: isVolumeHovered ? "scale(1.1)" : "scale(1)",
   };
 
   const volumeSliderStyle = {
-    width: showVolumeSlider || isVolumeHovered ? "80px" : "0px",
-    height: "4px",
+    width: showVolumeSlider || isVolumeHovered ? "60px" : "0px",
+    height: "3px",
     background: "#E5E7EB",
     borderRadius: "2px",
     outline: "none",
     cursor: "pointer",
-    transition: "all 0.3s ease",
-    marginLeft: "8px",
+    transition: "all 0.2s ease",
+    marginLeft: "6px",
     opacity: showVolumeSlider || isVolumeHovered ? 1 : 0,
-    overflow: "hidden"
+    overflow: "hidden",
   };
 
-  const responsiveStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: "16px"
-  };
+  if (!track) {
+    console.log("NowPlayingBar: Rendering placeholder - no valid track");
+    return (
+      <div style={{
+        ...playerBarStyle,
+        height: "50px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <div style={{
+          color: "#6B7280",
+          fontSize: "12px",
+          fontWeight: "500",
+        }}>
+          Select a track to start your musical journey
+        </div>
+        <audio ref={audioRef} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -297,235 +392,202 @@ export default function NowPlayingBar({
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          
           @keyframes pulse {
-            0%, 100% { box-shadow: 0 4px 12px rgba(208, 188, 255, 0.4); }
-            50% { box-shadow: 0 8px 20px rgba(91, 33, 182, 0.6); }
+            0%, 100% { box-shadow: 0 2px 6px rgba(208, 188, 255, 0.3); }
+            50% { box-shadow: 0 4px 10px rgba(91, 33, 182, 0.4); }
           }
-
           input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
             background: transparent;
           }
-
           input[type="range"]::-webkit-slider-track {
             background: #E5E7EB;
-            height: 4px;
+            height: 3px;
             border-radius: 2px;
           }
-
           input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            height: 16px;
-            width: 16px;
+            height: 12px;
+            width: 12px;
             border-radius: 50%;
             background: #5B21B6;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: all 0.1s ease;
           }
-
           input[type="range"]::-webkit-slider-thumb:hover {
             background: #4C1D95;
             transform: scale(1.2);
-            box-shadow: 0 4px 8px rgba(91, 33, 182, 0.4);
+            box-shadow: 0 2px 4px rgba(91, 33, 182, 0.2);
           }
-
           input[type="range"]::-moz-range-track {
             background: #E5E7EB;
-            height: 4px;
+            height: 3px;
             border-radius: 2px;
             border: none;
           }
-
           input[type="range"]::-moz-range-thumb {
-            height: 16px;
-            width: 16px;
+            height: 12px;
+            width: 12px;
             border-radius: 50%;
             background: #5B21B6;
             cursor: pointer;
             border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
           }
-
-          @media (max-width: 768px) {
+          @media (max-width: 640px) {
             .player-bar-mobile {
               flex-direction: column;
-              padding: 12px 16px;
-              gap: 12px;
+              align-items: center;
+              padding: 8px;
+              height: auto;
             }
-            
-            .controls-mobile {
-              order: 1;
-            }
-            
             .track-info-mobile {
-              order: 2;
-              justify-content: center;
+              margin-bottom: 4px;
             }
-            
+            .controls-mobile {
+              margin: 0;
+            }
             .volume-mobile {
-              order: 3;
-              justify-content: center;
+              margin-top: 4px;
             }
           }
         `}
       </style>
-      
       <div style={playerBarStyle}>
-        {track ? (
-          <div style={responsiveStyle} className="player-bar-mobile">
-            {/* Track Info */}
-            <div 
-              style={trackInfoStyle} 
-              className="track-info-mobile"
-              onClick={handleInfoClick}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(208, 188, 255, 0.1)";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.transform = "translateY(0px)";
-              }}
-            >
-              <img 
-                src={track.album.cover_small} 
-                alt={track.title} 
-                style={albumArtStyle}
-              />
-              <div style={{ flex: 1 }}>
-                <p style={{ 
-                  fontWeight: "600", 
-                  color: "#213547", 
-                  margin: "0 0 4px 0",
-                  fontSize: "14px",
-                  lineHeight: "1.2"
-                }}>
-                  {track.title}
-                </p>
-                <p style={{ 
-                  color: "#6B7280", 
-                  fontSize: "12px", 
+        <div style={topProgressStyle} onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const percent = ((e.clientX - rect.left) / rect.width) * 100;
+          if (audioRef.current) {
+            audioRef.current.currentTime = (percent / 100) * audioRef.current.duration;
+            setProgress(percent);
+          }
+        }}>
+          <div style={topProgressFillStyle} />
+        </div>
+        <div style={mainContentStyle}>
+          <div
+            style={trackInfoStyle}
+            onClick={handleInfoClick}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(208, 188, 255, 0.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <img
+              src={track.album?.cover_small || ""}
+              alt={track.title || "Unknown Title"}
+              style={albumArtStyle}
+            />
+            <div style={trackTextStyle}>
+              <p
+                style={{
+                  fontWeight: "600",
+                  color: "#213547",
                   margin: 0,
-                  lineHeight: "1.2"
-                }}>
-                  {track.artist.name}
-                </p>
-                <p style={{ 
-                  color: "#D0BCFF", 
-                  fontSize: "10px", 
-                  margin: "2px 0 0 0",
-                  fontWeight: "500",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px"
-                }}>
-                  PLAYING FROM POPULAR
-                </p>
-              </div>
+                  fontSize: "12px",
+                  lineHeight: "1.2",
+                }}
+              >
+                {track.title || "Unknown Title"}
+              </p>
+              <p
+                style={{
+                  color: "#6B7280",
+                  fontSize: "10px",
+                  margin: 0,
+                  lineHeight: "1.2",
+                }}
+              >
+                {track.artist?.name || "Unknown Artist"}
+              </p>
             </div>
-
-            {/* Controls & Progress */}
-            <div style={controlsContainerStyle} className="controls-mobile">
-              <div style={controlsStyle}>
-                <button
-                  onClick={handlePrevTrack}
-                  style={getControlButtonStyle('prev')}
-                  onMouseEnter={() => setHoveredButton('prev')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                >
-                  ⏮
-                </button>
-                
-                <button
-                  onClick={togglePlay}
-                  style={getControlButtonStyle('play', isPlaying)}
-                  onMouseEnter={() => setHoveredButton('play')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                >
-                  {isPlaying ? "⏸" : "▶"}
-                </button>
-                
-                <button
-                  onClick={handleNextTrack}
-                  style={getControlButtonStyle('next')}
-                  onMouseEnter={() => setHoveredButton('next')}
-                  onMouseLeave={() => setHoveredButton(null)}
-                >
-                  ⏭
-                </button>
-              </div>
-
-              {/* Progress Bar */}
-              <div style={progressContainerStyle}>
-                <span style={timeStyle}>{formatTime(currentTime)}</span>
-                <div 
-                  style={progressBarStyle}
-                  onMouseEnter={() => setProgressHover(true)}
-                  onMouseLeave={() => setProgressHover(false)}
-                >
-                  <div style={progressFillStyle} />
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={progress}
-                    onChange={handleSeek}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      opacity: 0,
-                      cursor: "pointer"
-                    }}
-                  />
-                </div>
-                <span style={timeStyle}>{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            {/* Volume Control */}
-            <div 
-              style={volumeContainerStyle} 
-              className="volume-mobile"
-              onMouseEnter={() => {
-                setShowVolumeSlider(true);
-                setIsVolumeHovered(true);
-              }}
-              onMouseLeave={() => {
-                setShowVolumeSlider(false);
-                setIsVolumeHovered(false);
-              }}
+          </div>
+          <div style={controlsContainerStyle}>
+            <button
+              onClick={handlePrevTrack}
+              style={getControlButtonStyle("prev")}
+              onMouseEnter={() => setHoveredButton("prev")}
+              onMouseLeave={() => setHoveredButton(null)}
             >
-              <button style={volumeButtonStyle}>
-                {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onChange={handleVolumeChange}
-                style={volumeSliderStyle}
-              />
+              ⏮
+            </button>
+            <button
+              onClick={togglePlay}
+              style={getControlButtonStyle("play", isPlaying)}
+              onMouseEnter={() => setHoveredButton("play")}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              {isPlaying ? "⏸" : "▶"}
+            </button>
+            <button
+              onClick={handleNextTrack}
+              style={getControlButtonStyle("next")}
+              onMouseEnter={() => setHoveredButton("next")}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              ⏭
+            </button>
+            <div style={progressContainerStyle}>
+              <span style={timeStyle}>{formatTime(currentTime)}</span>
+              <div
+                style={progressBarStyle}
+                onMouseEnter={() => setProgressHover(true)}
+                onMouseLeave={() => setProgressHover(false)}
+              >
+                <div style={progressFillStyle} />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={progress}
+                  onChange={handleSeek}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+              <span style={timeStyle}>{formatTime(duration)}</span>
             </div>
           </div>
-        ) : (
-          <div style={{
-            textAlign: "center",
-            color: "#6B7280",
-            fontSize: "14px",
-            fontWeight: "500"
-          }}>
-            Select a track to start your musical journey
+          <div
+            style={volumeContainerStyle}
+            onMouseEnter={() => {
+              setShowVolumeSlider(true);
+              setIsVolumeHovered(true);
+            }}
+            onMouseLeave={() => {
+              setShowVolumeSlider(false);
+              setIsVolumeHovered(false);
+            }}
+          >
+            <button style={volumeButtonStyle}>
+              {volume === 0 ? "🔇" : volume < 0.5 ? "🔉" : "🔊"}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={handleVolumeChange}
+              style={volumeSliderStyle}
+            />
           </div>
-        )}
-        <audio ref={audioRef} />
+        </div>
+        <div style={{ display: "none" }}>
+          <audio ref={audioRef} />
+        </div>
       </div>
     </>
   );
