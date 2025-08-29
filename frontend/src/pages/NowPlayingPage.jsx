@@ -1,15 +1,14 @@
-// src/pages/NowPlayingPage.js
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import BackHomeButton from "../components/BackHomeButton";
 import AlbumTrackList from "../components/AlbumTrackList";
 
 export default function NowPlayingPage() {
   const location = useLocation();
-  const { track } = location.state || {}; // track passed from navigation
-  const [albumTracks, setAlbumTracks] = useState([]);
-  const [currentTrack, setCurrentTrack] = useState(track || null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { track } = location.state || {};
+  const { setCurrentTrack, setAlbumTracks, togglePlay, isPlaying, setIsPlaying } = useOutletContext();
+  const [albumTracks, setLocalAlbumTracks] = useState([]);
+  const [currentTrack, setLocalCurrentTrack] = useState(track || null);
 
   // Fetch album tracks when track changes
   useEffect(() => {
@@ -18,14 +17,25 @@ export default function NowPlayingPage() {
         try {
           const res = await fetch(`http://localhost:3001/api/album/${track.album.id}`);
           const data = await res.json();
-          setAlbumTracks(data.tracks.data || []);
+          const tracks = data.tracks.data || [];
+          setLocalAlbumTracks(tracks);
+          setAlbumTracks(tracks); // Update parent state
         } catch (error) {
           console.error("Error fetching album tracks:", error);
         }
       };
       fetchAlbumTracks();
     }
-  }, [track]);
+  }, [track, setAlbumTracks]);
+
+  // Sync local currentTrack with parent
+  useEffect(() => {
+    if (currentTrack) {
+      setCurrentTrack(currentTrack); // Update parent state
+    }
+    // Initialize isPlaying to false when track changes to prevent auto-play
+    setIsPlaying(false);
+  }, [currentTrack, setCurrentTrack, setIsPlaying]);
 
   if (!track) {
     return (
@@ -50,10 +60,14 @@ export default function NowPlayingPage() {
   const handleTrackClick = (selectedTrack) => {
     if (!selectedTrack) return;
     if (currentTrack?.id === selectedTrack.id) {
-      setIsPlaying(!isPlaying); // toggle play/pause
+      console.log("NowPlayingPage: Toggling play/pause for", selectedTrack.title);
+      togglePlay(); // Call togglePlay from NowPlayingBar
+      setIsPlaying(!isPlaying); // Update parent isPlaying state
     } else {
-      setCurrentTrack(selectedTrack);
-      setIsPlaying(true); // auto play new track
+      console.log("NowPlayingPage: Switching to track", selectedTrack.title);
+      setLocalCurrentTrack(selectedTrack);
+      setCurrentTrack(selectedTrack); // Update parent state
+      setIsPlaying(false); // Ensure no auto-play when switching tracks
     }
   };
 

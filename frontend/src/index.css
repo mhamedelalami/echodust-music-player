@@ -29,8 +29,8 @@ a:hover {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 0; /* Changed from 100vh to allow growth */
-  height: auto; /* Ensure body can expand */
+  min-height: 0; 
+  height: auto; 
 }
 
 h1 {

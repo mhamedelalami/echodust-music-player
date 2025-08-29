@@ -41,6 +41,7 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
                 isPlaying,
                 setIsPlaying,
                 togglePlay: togglePlayRef,
+                autoPlay: false,
               }}
             />
           </main>
@@ -65,4 +66,6 @@ const Layout = ({ currentTrack, albumTracks, setCurrentTrack, setAlbumTracks }) 
 };
 
 export default Layout;
+
+
 

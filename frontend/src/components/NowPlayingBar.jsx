@@ -20,6 +20,7 @@ export default function NowPlayingBar({
   const [isVolumeHovered, setIsVolumeHovered] = useState(false);
   const [hoveredButton, setHoveredButton] = useState(null);
   const [progressHover, setProgressHover] = useState(false);
+  
 
   const togglePlay = useCallback(() => {
     if (!audioRef.current) {
@@ -31,24 +32,27 @@ export default function NowPlayingBar({
       console.log("NowPlayingBar: Pausing audio");
       audioRef.current.pause();
       setIsPlaying(false);
-      setIsPlayingParent?.(false);
+      if (setIsPlayingParent) setIsPlayingParent(false);
     } else {
       console.log("NowPlayingBar: Playing audio");
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        setIsPlayingParent?.(true);
-      }).catch((error) => {
-        console.error("NowPlayingBar: Playback failed:", error);
-        setIsPlaying(false);
-        setIsPlayingParent?.(false);
-      });
+      audioRef.current
+        .play()
+        .then(() => {
+          console.log("NowPlayingBar: Playback started successfully");
+          setIsPlaying(true);
+          if (setIsPlayingParent) setIsPlayingParent(true);
+        })
+        .catch((error) => {
+          console.error("NowPlayingBar: Playback failed:", error);
+          setIsPlaying(false);
+          if (setIsPlayingParent) setIsPlayingParent(false);
+        });
     }
   }, [isPlaying, setIsPlayingParent]);
 
   useEffect(() => {
-    console.log("NowPlayingBar: Mounting with currentTrack", currentTrack?.title, "albumTracks length", albumTracks.length);
-    if (setTogglePlay) {
-      console.log("NowPlayingBar: Setting togglePlay");
+    console.log("NowPlayingBar: Setting up togglePlay reference");
+    if (setTogglePlay && typeof togglePlay === "function") {
       setTogglePlay(togglePlay);
     }
   }, [setTogglePlay, togglePlay]);
@@ -57,101 +61,113 @@ export default function NowPlayingBar({
     if (!albumTracks || albumTracks.length === 0 || !currentTrack || !audioRef.current) {
       console.log("NowPlayingBar: Missing required data or audioRef");
       setIsPlaying(false);
-      setIsPlayingParent?.(false);
+      if (setIsPlayingParent) setIsPlayingParent(false);
       return;
     }
+
     const index = albumTracks.findIndex((t) => t?.id === currentTrack?.id);
     if (index >= 0) {
-      console.log("NowPlayingBar: Setting trackIndex to", index);
+      console.log("NowPlayingBar: Setting trackIndex to", index, "for track", currentTrack?.title);
       setTrackIndex(index);
+
       if (audioRef.current.src !== currentTrack.preview) {
         console.log("NowPlayingBar: Loading new track", currentTrack?.title);
         audioRef.current.src = currentTrack.preview;
         audioRef.current.volume = volume;
         audioRef.current.load();
-        audioRef.current.play().then(() => {
-          console.log("NowPlayingBar: Auto-play succeeded after track change");
-          setIsPlaying(true);
-          setIsPlayingParent?.(true);
-        }).catch((error) => {
-          console.error("NowPlayingBar: Auto-play failed after track change:", error);
-          setIsPlaying(false);
-          setIsPlayingParent?.(false);
-        });
+
+        console.log("NowPlayingBar: Attempting to auto-play new track");
+        audioRef.current
+          .play()
+          .then(() => {
+            console.log("NowPlayingBar: Auto-play succeeded");
+            setIsPlaying(true);
+            if (setIsPlayingParent) setIsPlayingParent(true);
+          })
+          .catch((error) => {
+            console.error("NowPlayingBar: Auto-play failed:", error);
+            setIsPlaying(false);
+            if (setIsPlayingParent) setIsPlayingParent(false);
+          });
+      } else {
+        console.log("NowPlayingBar: Track unchanged, maintaining playback state");
       }
     } else {
       console.log("NowPlayingBar: Current track not found in albumTracks");
+      setIsPlaying(false);
+      if (setIsPlayingParent) setIsPlayingParent(false);
     }
   }, [currentTrack, albumTracks, setIsPlayingParent, volume]);
-
-  useEffect(() => {
-    if (!albumTracks || albumTracks.length === 0 || !audioRef.current) {
-      console.log("NowPlayingBar: No tracks or audioRef available");
-      return;
-    }
-    const track = albumTracks[trackIndex];
-    if (!track || !track.preview) {
-      console.log("NowPlayingBar: Invalid track or missing preview");
-      setIsPlaying(false);
-      setIsPlayingParent?.(false);
-      return;
-    }
-    if (audioRef.current.src !== track.preview) {
-      console.log("NowPlayingBar: Loading new track", track?.title);
-      audioRef.current.src = track.preview;
-      audioRef.current.volume = volume;
-      audioRef.current.load();
-      audioRef.current.play().then(() => {
-        console.log("NowPlayingBar: Auto-play succeeded after track index change");
-        setIsPlaying(true);
-        setIsPlayingParent?.(true);
-      }).catch((error) => {
-        console.error("NowPlayingBar: Auto-play failed after track index change:", error);
-        setIsPlaying(false);
-        setIsPlayingParent?.(false);
-      });
-    }
-  }, [trackIndex, albumTracks, setIsPlayingParent, volume]);
 
   const handleNextTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) {
       console.log("NowPlayingBar: No tracks for next");
       return;
     }
-    setTrackIndex((prev) => {
-      const nextIndex = (prev + 1) % albumTracks.length;
-      const nextTrack = albumTracks[nextIndex];
-      console.log("NowPlayingBar: Moving to next track", nextTrack?.title);
-      setCurrentTrack?.(nextTrack);
-      return nextIndex;
-    });
-  }, [albumTracks, setCurrentTrack]);
+
+    const nextIndex = (trackIndex + 1) % albumTracks.length;
+    const nextTrack = albumTracks[nextIndex];
+
+    console.log("NowPlayingBar: Moving to next track", nextTrack?.title, "index", nextIndex);
+    setTrackIndex(nextIndex);
+    if (setCurrentTrack) {
+      setCurrentTrack(nextTrack);
+      if (!isPlaying) {
+        console.log("NowPlayingBar: Auto-playing next track");
+        setIsPlaying(true);
+        if (setIsPlayingParent) setIsPlayingParent(true);
+      }
+    }
+  }, [albumTracks, setCurrentTrack, trackIndex, isPlaying, setIsPlayingParent]);
 
   const handlePrevTrack = useCallback(() => {
     if (!albumTracks || albumTracks.length === 0) {
       console.log("NowPlayingBar: No tracks for previous");
       return;
     }
-    setTrackIndex((prev) => {
-      const prevIndex = (prev - 1 + albumTracks.length) % albumTracks.length;
-      const prevTrack = albumTracks[prevIndex];
-      console.log("NowPlayingBar: Moving to previous track", prevTrack?.title);
-      setCurrentTrack?.(prevTrack);
-      return prevIndex;
-    });
-  }, [albumTracks, setCurrentTrack]);
+
+    const prevIndex = (trackIndex - 1 + albumTracks.length) % albumTracks.length;
+    const prevTrack = albumTracks[prevIndex];
+
+    console.log("NowPlayingBar: Moving to previous track", prevTrack?.title, "index", prevIndex);
+    setTrackIndex(prevIndex);
+    if (setCurrentTrack) {
+      setCurrentTrack(prevTrack);
+      if (!isPlaying) {
+        console.log("NowPlayingBar: Auto-playing previous track");
+        setIsPlaying(true);
+        if (setIsPlayingParent) setIsPlayingParent(true);
+      }
+    }
+  }, [albumTracks, setCurrentTrack, trackIndex, isPlaying, setIsPlayingParent]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const updateProgress = () => setProgress((audio.currentTime / audio.duration) * 100 || 0);
+
+    const updateProgress = () =>
+      setProgress((audio.currentTime / audio.duration) * 100 || 0);
+
+    const handleEnded = () => {
+      console.log("NowPlayingBar: Track ended", currentTrack?.title);
+      if (albumTracks.length > 1) {
+        console.log("NowPlayingBar: Multiple tracks, moving to next");
+        handleNextTrack();
+      } else {
+        console.log("NowPlayingBar: Single track, stopping playback");
+        setIsPlaying(false);
+        if (setIsPlayingParent) setIsPlayingParent(false);
+      }
+    };
+
     audio.addEventListener("timeupdate", updateProgress);
-    audio.addEventListener("ended", handleNextTrack);
+    audio.addEventListener("ended", handleEnded);
+
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
-      audio.removeEventListener("ended", handleNextTrack);
+      audio.removeEventListener("ended", handleEnded);
     };
-  }, [handleNextTrack]);
+  }, [handleNextTrack, albumTracks, currentTrack, setIsPlayingParent]);
 
   const track = albumTracks && albumTracks[trackIndex] ? albumTracks[trackIndex] : null;
 
@@ -161,7 +177,7 @@ export default function NowPlayingBar({
       return;
     }
     console.log("NowPlayingBar: Info clicked for track", track.title);
-    navigate("/now-playing", { state: { track, albumTracks } });
+    navigate("/now-playing", { state: { track, albumTracks, autoPlay: true } });
   };
 
   const handleVolumeChange = (e) => {
@@ -364,18 +380,8 @@ export default function NowPlayingBar({
   if (!track) {
     console.log("NowPlayingBar: Rendering placeholder - no valid track");
     return (
-      <div style={{
-        ...playerBarStyle,
-        height: "50px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        <div style={{
-          color: "#6B7280",
-          fontSize: "12px",
-          fontWeight: "500",
-        }}>
+      <div style={{ ...playerBarStyle, height: "50px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "#6B7280", fontSize: "12px", fontWeight: "500" }}>
           Select a track to start your musical journey
         </div>
         <audio ref={audioRef} />
@@ -385,16 +391,21 @@ export default function NowPlayingBar({
 
   return (
     <div style={playerBarStyle}>
-      <div style={topProgressStyle} onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const percent = ((e.clientX - rect.left) / rect.width) * 100;
-        if (audioRef.current) {
-          audioRef.current.currentTime = (percent / 100) * audioRef.current.duration;
-          setProgress(percent);
-        }
-      }}>
+      <div
+        style={topProgressStyle}
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const percent = ((e.clientX - rect.left) / rect.width) * 100;
+          if (audioRef.current) {
+            console.log("NowPlayingBar: Seeking to", percent);
+            audioRef.current.currentTime = (percent / 100) * audioRef.current.duration;
+            setProgress(percent);
+          }
+        }}
+      >
         <div style={topProgressFillStyle} />
       </div>
+
       <div style={mainContentStyle}>
         <div
           style={trackInfoStyle}
@@ -406,35 +417,17 @@ export default function NowPlayingBar({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <img
-            src={track.album?.cover_small || ""}
-            alt={track.title || "Unknown Title"}
-            style={albumArtStyle}
-          />
+          <img src={track.album?.cover_small || ""} alt={track.title || "Unknown Title"} style={albumArtStyle} />
           <div style={trackTextStyle}>
-            <p
-              style={{
-                fontWeight: "600",
-                color: "#213547",
-                margin: 0,
-                fontSize: "12px",
-                lineHeight: "1.2",
-              }}
-            >
+            <p style={{ fontWeight: "600", color: "#213547", margin: 0, fontSize: "12px", lineHeight: "1.2" }}>
               {track.title || "Unknown Title"}
             </p>
-            <p
-              style={{
-                color: "#6B7280",
-                fontSize: "10px",
-                margin: 0,
-                lineHeight: "1.2",
-              }}
-            >
+            <p style={{ color: "#6B7280", fontSize: "10px", margin: 0, lineHeight: "1.2" }}>
               {track.artist?.name || "Unknown Artist"}
             </p>
           </div>
         </div>
+
         <div style={controlsContainerStyle}>
           <button
             onClick={handlePrevTrack}
@@ -460,6 +453,7 @@ export default function NowPlayingBar({
           >
             ⏭
           </button>
+
           <div style={progressContainerStyle}>
             <span style={timeStyle}>{formatTime(currentTime)}</span>
             <div
@@ -474,20 +468,13 @@ export default function NowPlayingBar({
                 max={100}
                 value={progress}
                 onChange={handleSeek}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  opacity: 0,
-                  cursor: "pointer",
-                }}
+                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer" }}
               />
             </div>
             <span style={timeStyle}>{formatTime(duration)}</span>
           </div>
         </div>
+
         <div
           style={volumeContainerStyle}
           onMouseEnter={() => {
@@ -513,9 +500,8 @@ export default function NowPlayingBar({
           />
         </div>
       </div>
-      <div style={{ display: "none" }}>
-        <audio ref={audioRef} />
-      </div>
+
+      <audio ref={audioRef} style={{ display: "none" }} />
     </div>
   );
 }

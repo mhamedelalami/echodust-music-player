@@ -147,7 +147,7 @@ const HomePage = () => {
       <div
         style={{
           textAlign: "center",
-          marginBottom: "5rem",
+          marginBottom: "4rem",
           padding: "0 1rem",
           marginTop: "7rem",
         }}
