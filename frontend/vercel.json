@@ -1,6 +1,6 @@
 {
   "$schema": "https://vercel.com/schema/config.json",
-  "version": 3,
+  "version": 2,
   "builds": [
     {
       "src": "frontend/package.json",
