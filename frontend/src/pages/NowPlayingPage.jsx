@@ -10,14 +10,25 @@ export default function NowPlayingPage() {
   const [albumTracks, setLocalAlbumTracks] = useState([]);
   const [currentTrack, setLocalCurrentTrack] = useState(track || null);
 
+  // Determine API base URL: Vercel serverless or local dev
+  const getApiBase = () => {
+    if (import.meta.env.DEV) {
+      // Local dev with Express
+      return "http://localhost:3001/api";
+    } else {
+      // Production (Vercel)
+      return "/api";
+    }
+  };
+
   // Fetch album tracks when track changes
   useEffect(() => {
     if (track?.album?.id) {
       const fetchAlbumTracks = async () => {
         try {
-          const res = await fetch(`http://localhost:3001/api/album/${track.album.id}`);
+          const res = await fetch(`/api/album/${track.album.id}`);
           const data = await res.json();
-          const tracks = data.tracks.data || [];
+          const tracks = data.tracks?.data || [];
           setLocalAlbumTracks(tracks);
           setAlbumTracks(tracks); // Update parent state
         } catch (error) {
@@ -33,8 +44,7 @@ export default function NowPlayingPage() {
     if (currentTrack) {
       setCurrentTrack(currentTrack); // Update parent state
     }
-    // Initialize isPlaying to false when track changes to prevent auto-play
-    setIsPlaying(false);
+    setIsPlaying(false); // Prevent auto-play
   }, [currentTrack, setCurrentTrack, setIsPlaying]);
 
   if (!track) {
@@ -56,18 +66,15 @@ export default function NowPlayingPage() {
     );
   }
 
-  // Toggle play/pause or switch track
   const handleTrackClick = (selectedTrack) => {
     if (!selectedTrack) return;
     if (currentTrack?.id === selectedTrack.id) {
-      console.log("NowPlayingPage: Toggling play/pause for", selectedTrack.title);
-      togglePlay(); // Call togglePlay from NowPlayingBar
-      setIsPlaying(!isPlaying); // Update parent isPlaying state
+      togglePlay();
+      setIsPlaying(!isPlaying);
     } else {
-      console.log("NowPlayingPage: Switching to track", selectedTrack.title);
       setLocalCurrentTrack(selectedTrack);
-      setCurrentTrack(selectedTrack); // Update parent state
-      setIsPlaying(false); // Ensure no auto-play when switching tracks
+      setCurrentTrack(selectedTrack);
+      setIsPlaying(false);
     }
   };
 
@@ -81,7 +88,6 @@ export default function NowPlayingPage() {
         color: "#ffffff",
       }}
     >
-      {/* Top bar */}
       <div
         style={{
           display: "flex",
@@ -93,7 +99,6 @@ export default function NowPlayingPage() {
         <BackHomeButton />
       </div>
 
-      {/* Album section */}
       <div
         style={{
           display: "flex",
@@ -106,7 +111,6 @@ export default function NowPlayingPage() {
           margin: "16px",
         }}
       >
-        {/* Album art */}
         <div style={{ textAlign: "center" }}>
           <img
             src={currentTrack?.album?.cover_big}
@@ -132,7 +136,6 @@ export default function NowPlayingPage() {
           </h2>
         </div>
 
-        {/* Track list */}
         <div
           style={{
             flex: 1,

@@ -1,8 +1,9 @@
+// frontend/server.cjs
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 
-// node-fetch v3 is ESM-only; load it dynamically from CJS:
+// node-fetch v3 is ESM-only; dynamically import it
 let _fetch;
 async function fetchUrl(...args) {
   if (!_fetch) {
@@ -15,11 +16,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
-app.use(cors({ origin: true })); // allow all origins, or restrict in production
-app.use(express.json());         // parse JSON bodies
-app.use(morgan("dev"));          // log requests (good for debugging)
+app.use(cors({ origin: true })); // allow all origins
+app.use(express.json());
+app.use(morgan("dev"));
 
-// --- Healthcheck route ---
+// --- Healthcheck ---
 app.get("/health", (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
 // --- Proxy handler ---
@@ -33,7 +34,7 @@ async function proxyAlbum(req, res) {
     const response = await fetchUrl(`https://api.deezer.com/album/${albumId}`, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     });
 
@@ -55,9 +56,7 @@ async function proxyAlbum(req, res) {
 
 // --- Routes ---
 app.get("/api/album/:id", proxyAlbum);
-
-// (Legacy alias, in case your frontend still calls /album/:id)
-app.get("/album/:id", proxyAlbum);
+app.get("/album/:id", proxyAlbum); // legacy alias
 
 // --- Start server ---
 app.listen(PORT, () => {
