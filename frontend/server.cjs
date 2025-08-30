@@ -1,16 +1,38 @@
-// frontend/api/album/[id].js
-export default async function handler(req, res) {
-  const { id } = req.query;
-  if (!id) {
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+
+
+let _fetch;
+async function fetchUrl(...args) {
+  if (!_fetch) {
+    _fetch = (await import("node-fetch")).default;
+  }
+  return _fetch(...args);
+}
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+
+app.use(cors({ origin: true })); // allow all origins, or restrict in production
+app.use(express.json());         // parse JSON bodies
+app.use(morgan("dev"));          // log requests (good for debugging)
+
+
+app.get("/health", (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
+async function proxyAlbum(req, res) {
+  const albumId = req.params.id;
+  if (!albumId) {
     return res.status(400).json({ error: "Missing album id" });
   }
 
   try {
-    // node-fetch is already included in Vercel Node runtime
-    const response = await fetch(`https://api.deezer.com/album/${id}`, {
+    const response = await fetchUrl(`https://api.deezer.com/album/${albumId}`, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        Accept: "application/json",
+        "Accept": "application/json",
       },
     });
 
@@ -23,9 +45,20 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    return res.status(200).json(data);
+    return res.json(data);
   } catch (err) {
     console.error("Album fetch failed:", err);
     return res.status(500).json({ error: "Failed to fetch album" });
   }
 }
+
+
+app.get("/api/album/:id", proxyAlbum);
+
+
+app.get("/album/:id", proxyAlbum);
+
+
+app.listen(PORT, () => {
+  console.log(`CORS proxy running on http://localhost:${PORT}`);
+});
