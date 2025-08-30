@@ -1,0 +1,26 @@
+{
+  "name": "EchoDust, Unlock the soundtrack of your soul.",
+  "short_name": "EchoDust",
+  "description": "A mood-based music player built with **Vite+React** and **Hybrid CSS Styling**. It allows users to search for music or discover tracks based on predefined moods such as “Chill,” “Happy,” or “Romantic,” using the **Deezer API**.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icons/icon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

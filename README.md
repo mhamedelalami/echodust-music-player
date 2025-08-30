@@ -1,7 +1,7 @@
 # 🎧 EchoDust
 
 **Unlock the soundtrack of your soul.**  
-EchoDust is a mood-based music player built with **React** and **Inline CSS Styling**. It allows users to search for music or discover tracks based on predefined moods such as “Chill,” “Happy,” or “Romantic,” using the **Deezer API**.
+EchoDust is a mood-based music player built with **Vite+React** and **Hybrid CSS Styling**. It allows users to search for music or discover tracks based on predefined moods such as “Chill,” “Happy,” or “Romantic,” using the **Deezer API**.
 
 ---
 
@@ -17,7 +17,7 @@ EchoDust is a mood-based music player built with **React** and **Inline CSS Styl
 
 ## 🔧 Tech Stack
 - React.js
-- Inline CSS Styling
+- Hybrid CSS Styling (inline/Tailwind)
 - Deezer API
 - HTML5 `<audio>`
 
@@ -118,6 +118,43 @@ App
 ├── BackHomeButton
 ├── MoodGenreSelector
 └── HamburgerMenu (Mobile only)
+
+### 📁 Project Structure
+
+echodust-music-player/
+├── .gitattributes
+├── .gitignore
+├── README.md
+└── frontend/
+    ├── node_modules/                
+    ├── public/                      # Static files served as-is
+    │   ├── favicon.ico
+    │   ├── manifest.json
+    │   ├── vite.svg
+    │   └── icons/
+    │       ├── icon-32x32.png
+    │       ├── icon-192x192.png
+    │       └── icon-512x512.png
+    ├── src/                         
+    │   ├── assets/                  # Images, icons, logos used in app
+    │   ├── components/              # Reusable React components
+    │   ├── pages/                   # Page components (NowPlaying, Library, etc.)
+    │   ├── services/                # API calls, helper functions
+    │   ├── styles/                  
+    │   ├── App.css
+    │   ├── App.jsx
+    │   ├── index.css
+    │   └── main.jsx                 # React entry point
+    ├── .gitignore
+    ├── eslint.config.js
+    ├── index.html                    # HTML template with favicon, manifest
+    ├── package-lock.json
+    ├── package.json
+    ├── postcss.config.js
+    ├── server.cjs
+    ├── tailwind.config.js
+    ├── vercel.json                   # Vercel SPA routing config
+    └── vite.config.js
 
 
 
